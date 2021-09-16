@@ -12,4 +12,11 @@ namespace RemitaBillAndBulkPayments.Models.BillersResponses
         public string responseMsg { get; set; }
         public string appVersionCode { get; set; }
     }
+
+    public class ResponseBodyBulk<T> where T : class
+    {
+        public string responseCode { get; set; }
+        public T responseData { get; set; }
+        public string responseMsg { get; set; }
+    }
 }

@@ -13,7 +13,7 @@ namespace RemitaBillAndBulkPayments.Services
     public interface IHttpClientHelper
     {
         Task<string> GetWithBody(string url, Dictionary<string, string> headers = null, object req = null);
-        Task<string> PostwithBody(string url, Dictionary<string, string> headers = null, object req = null, string requestBody = null);
+        Task<string> PostwithBody(string url, Dictionary<string, string> headers = null, string requestBody = null);
     }
 
     public class HttpClientHelper : IHttpClientHelper
@@ -62,11 +62,6 @@ namespace RemitaBillAndBulkPayments.Services
                     responseBody = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                     _logger.LogInformation($"GetWithBody: Results from {url} is: {responseBody}");
 
-
-                    if (!result.IsSuccessStatusCode)
-                    {
-                        responseBody = null;
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -87,12 +82,12 @@ namespace RemitaBillAndBulkPayments.Services
         /// <param name="req"></param>
         /// <param name="requestBody"></param>
         /// <returns></returns>
-        public async Task<string> PostwithBody(string url, Dictionary<string, string> headers = null, object req = null, string requestBody = null)
+        public async Task<string> PostwithBody(string url, Dictionary<string, string> headers = null, string requestBody = null)
         {
-            if (req != null)
+            if (requestBody != null)
             {
                 _logger.LogInformation($"URL:PostwithBody---> {url}");
-                _logger.LogInformation($"RequestObj:PostwithBody---> {JsonConvert.SerializeObject(req)}");
+                _logger.LogInformation($"RequestObj:PostwithBody---> {JsonConvert.SerializeObject(requestBody)}");
             }
             else
             {
@@ -102,6 +97,8 @@ namespace RemitaBillAndBulkPayments.Services
             var responseBody = string.Empty;
             using (var client = new HttpClient())
             {
+                client.Timeout = TimeSpan.FromMinutes(5);
+
                 var request = new HttpRequestMessage
                 {
                     RequestUri = new Uri(url),
@@ -110,7 +107,7 @@ namespace RemitaBillAndBulkPayments.Services
 
                 if (!string.IsNullOrEmpty(requestBody))
                 {
-                    request.Content = new StringContent(requestBody);
+                    request.Content = new StringContent(requestBody); 
                     request.Content.Headers.Clear();
                     request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 }
@@ -124,17 +121,21 @@ namespace RemitaBillAndBulkPayments.Services
                             request.Headers.TryAddWithoutValidation(item.Key, item.Value);
                         }
                     }
-                    var result = client.SendAsync(request).Result;
-                    responseBody = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                    _logger.LogInformation($"Response:  {responseBody}");
+                    var result = await client.SendAsync(request);
+
+                    _logger.LogInformation($"Raw response received: {JsonConvert.SerializeObject(result)}");
+
+                    return await result.Content.ReadAsStringAsync();
+
                 }
                 catch (Exception ex)
                 {
                     _logger.LogInformation($"PostWithBody: An Error Occured When Calling {url}, {ex.ToString()}");
                 }
             }
+
             return responseBody;
-        }     
+        }
     }
 }

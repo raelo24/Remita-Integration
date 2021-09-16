@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using RemitaBillAndBulkPayments.Models.BillerCommon;
+using RemitaBillAndBulkPayments.Models.BillersRequests;
 using RemitaBillAndBulkPayments.Models.BillersResponses;
+using RemitaBillAndBulkPayments.Models.EFContext;
 using RemitaBillAndBulkPayments.Services;
 using System;
 using System.Collections.Generic;
@@ -16,44 +19,66 @@ namespace RemitaBillAndBulkPayments.Controllers
     public class BillPaymentController : ControllerBase
     {
         private readonly IRemitaService _remitaService;
-        private readonly ILogger<BillPaymentController> _logger;
 
-        public BillPaymentController(IRemitaService remitaService, ILogger<BillPaymentController> logger)
+        public BillPaymentController(IRemitaService remitaService)
         {
             _remitaService = remitaService;
-            _logger = logger;
         }
 
         // GET: api/<BillPaymentController>
-        [HttpGet]
+        [HttpGet("GetBillers")]
         public async Task<Response<Billers>> GetBillers()
         {
             return await _remitaService.GetBiller();
         }
 
-        // GET api/<BillPaymentController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpGet("GetService")]
+        public async Task<Response<List<Service>>> GetService(string biller)
         {
-            return "value";
+            return await _remitaService.GetService(biller);
         }
 
-        // POST api/<BillPaymentController>
-        [HttpPost]
-        public void Post([FromBody] string value)
+        [HttpGet("GetCustomFields")]
+        public async Task<ResponseCustomField> GetCustomFields(string billId)
         {
+            return await _remitaService.GetCustomFields(billId);
+        }       
+
+        [HttpPost("ValidateRequest")] 
+        public async Task<Response<ValidateResponse>> ValidateRequest(Validate details)
+        {
+            return await _remitaService.Validate(details);
         }
 
-        // PUT api/<BillPaymentController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        [HttpPost("GenerateRRR")]
+        public async Task<Response<GenerateRRR>> GenerateRRR(Validate details)
         {
+            return await _remitaService.GenerateRRR(details);
         }
 
-        // DELETE api/<BillPaymentController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpGet("GetRRRDetails")]
+        public async Task<Response<RRRDetails>> GetRRRDetails(string rrr)
         {
+            return await _remitaService.GetRRRDetails(rrr);
         }
+
+
+        [HttpGet("PaymentStatus")]
+        public async Task<Response<PaymentStatus>> PaymentStatus(string transactionId)
+        {
+            return await _remitaService.PaymentStatus(transactionId);
+        }
+
+        [HttpPost("BillPaymentNotificatiion")]
+        public async Task<Response<BillPaymentResponse>> BillPaymentNotificatiion(BillPaymentRequest details)
+        {
+            if (ModelState.IsValid)
+            {
+                return await _remitaService.BillPaymentNotification(details);
+            }
+
+            return new Response<BillPaymentResponse> { responseCode = "1001", responseMsg = "Request is invalid" };
+        }
+
     }
 }

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace RemitaBillAndBulkPayments.Models.BulkResponses
 {
-    public class Data
+    public class BulkData
     {
         public string batchRef { get; set; }
         public int totalAmount { get; set; }
@@ -15,8 +17,14 @@ namespace RemitaBillAndBulkPayments.Models.BulkResponses
 
     public class BulkResponse
     {
+        [JsonIgnore]
+        public int id { get; set; }
+
         public string status { get; set; }
         public string message { get; set; }
-        public Data data { get; set; }
+        [NotMapped]
+        public BulkData? data { get; set; }
+        [JsonIgnore]
+        public string datastr { get; set; }
     }
 }

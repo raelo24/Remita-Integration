@@ -10,23 +10,29 @@ namespace RemitaBillAndBulkPayments.Models.BillersResponses
         public string id { get; set; }
         public string columnName { get; set; }
         public string columnType { get; set; }
-        public List<object> customFieldDropDown { get; set; }
+        public List<customFieldDropDown> customFieldDropDown { get; set; }
         public string columnLength { get; set; }
         public bool required { get; set; }
         public int dataLoadRuleId { get; set; }
         public string activeStatus { get; set; }
     }
 
-    public class ResponseCustomField<T> where T : class
+    public class ResponseCustomField : Response<CustomFields>
     {
-        public string responseCode { get; set; }
-        public List<T> responseData { get; set; }
-        public string responseMsg { get; set; }
-        public string appVersionCode { get; set; }
-
         public bool acceptPartPayment { get; set; }
         public bool fixedPrice { get; set; }
-        public int fixedAmount { get; set; }
+        public double fixedAmount { get; set; }
         public string currency { get; set; }
+    }
+
+    public class customFieldDropDown{
+        public string description { get; set; }
+        public string fixedprice { get; set; }
+        public string unitprice { get; set; }
+        public object itemphoto { get; set; }
+        public object itemname { get; set; }
+        public string code { get; set; }
+        public string accountid { get; set; }
+        public string id { get; set; }
     }
 }

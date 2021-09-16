@@ -1,31 +1,14 @@
-﻿using System;
+﻿using RemitaBillAndBulkPayments.Models.BillerCommon;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace RemitaBillAndBulkPayments.Models.BillersRequests
 {
-    public class Value
-    {
-        public string value { get; set; }
-        public int quantity { get; set; }
-        public int amount { get; set; }
-    }
+    
 
-    public class CustomField
+    public class ValidateRequest : Validate
     {
-        public string id { get; set; }
-        public List<Value> values { get; set; }
-    }
-
-    public class ValidateRequest
-    {
-        public List<CustomField> customFields { get; set; }
-        public string billId { get; set; }
-        public int amount { get; set; }
-        public string payerPhone { get; set; }
-        public string currency { get; set; }
-        public string payerName { get; set; }
-        public string payerEmail { get; set; }
     }
 }

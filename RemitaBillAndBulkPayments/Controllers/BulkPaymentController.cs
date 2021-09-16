@@ -1,4 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using RemitaBillAndBulkPayments.Models.BillersResponses;
+using RemitaBillAndBulkPayments.Models.BulkRequests;
+using RemitaBillAndBulkPayments.Models.BulkResponses;
+using RemitaBillAndBulkPayments.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,36 +16,17 @@ namespace RemitaBillAndBulkPayments.Controllers
     [ApiController]
     public class BulkPaymentController : ControllerBase
     {
-        // GET: api/<BulkPaymentController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly IRemitaService _remitaService;
+
+        public BulkPaymentController(IRemitaService remitaService)
         {
-            return new string[] { "value1", "value2" };
+            _remitaService = remitaService;
         }
 
-        // GET api/<BulkPaymentController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpPost("Send")]
+        public async Task<ResponseBodyBulk<BulkResponse>> GenerateRRR(BulkRequest details)
         {
-            return "value";
-        }
-
-        // POST api/<BulkPaymentController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<BulkPaymentController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<BulkPaymentController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            return await _remitaService.SendBulkPayment(details);
         }
     }
 }
