@@ -17,19 +17,18 @@ namespace RemitaBillAndBulkPayments.Models.EFContext
             public DatabaseContext(DbContextOptions<DatabaseContext> options)
                 : base(options)
             {
+                 
             }
 
-           public DbSet<BillPaymentRequest> PaymentRequest { get; set; }
-           public DbSet<BillPaymentResponse> PaymentResponse { get; set; }
-           public DbSet<BulkRequest> BulkRequest { get; set; }
-           public DbSet<BulkResponse> BulkResponse { get; set; }
-           public DbSet<TokenData> TokenData { get; set; }
-
-
-
+        public DbSet<BillPaymentRequest> PaymentRequests { get; set; }
+        public DbSet<BillPaymentResponse> PaymentResponses { get; set; }
+        public DbSet<BulkRequest> BulkRequests { get; set; }
+        public DbSet<BulkResponse> BulkResponses { get; set; }
+        public DbSet<TokenData> TokenData { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-           {
+           {              
+
                 OnModelCreatingPartial(modelBuilder);
            }
 

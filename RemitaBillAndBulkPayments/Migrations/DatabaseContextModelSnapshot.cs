@@ -88,7 +88,7 @@ namespace RemitaBillAndBulkPayments.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PaymentRequest");
+                    b.ToTable("PaymentRequests");
                 });
 
             modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BillersResponses.BillPaymentResponse", b =>
@@ -130,7 +130,7 @@ namespace RemitaBillAndBulkPayments.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("PaymentResponse");
+                    b.ToTable("PaymentResponses");
                 });
 
             modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkRequests.BulkRequest", b =>
@@ -167,14 +167,14 @@ namespace RemitaBillAndBulkPayments.Migrations
 
                     b.HasKey("batchRef");
 
-                    b.ToTable("BulkRequest");
+                    b.ToTable("BulkRequests");
                 });
 
             modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkRequests.Transaction", b =>
                 {
-                    b.Property<long>("transactionRef")
+                    b.Property<int>("id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
+                        .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("BulkRequestbatchRef")
@@ -182,9 +182,6 @@ namespace RemitaBillAndBulkPayments.Migrations
 
                     b.Property<double>("amount")
                         .HasColumnType("float");
-
-                    b.Property<string>("batchRef")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("destinationAccount")
                         .HasColumnType("nvarchar(max)");
@@ -198,22 +195,52 @@ namespace RemitaBillAndBulkPayments.Migrations
                     b.Property<string>("destinationNarration")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("transactionRef");
+                    b.Property<string>("transactionRef")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("id");
 
                     b.HasIndex("BulkRequestbatchRef");
 
                     b.ToTable("Transaction");
                 });
 
-            modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkResponses.BulkResponse", b =>
+            modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkResponses.BulkData", b =>
                 {
                     b.Property<int>("id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<string>("datastr")
+                    b.Property<int>("BulkId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("authorizationId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("batchRef")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("totalAmount")
+                        .HasColumnType("float");
+
+                    b.Property<string>("transactionDate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("BulkId")
+                        .IsUnique();
+
+                    b.ToTable("BulkData");
+                });
+
+            modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkResponses.BulkResponse", b =>
+                {
+                    b.Property<int>("BulkId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("message")
                         .HasColumnType("nvarchar(max)");
@@ -221,23 +248,37 @@ namespace RemitaBillAndBulkPayments.Migrations
                     b.Property<string>("status")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("id");
+                    b.HasKey("BulkId");
 
-                    b.ToTable("BulkResponse");
+                    b.ToTable("BulkResponses");
                 });
 
             modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkRequests.Transaction", b =>
                 {
-                    b.HasOne("RemitaBillAndBulkPayments.Models.BulkRequests.BulkRequest", "BulkRequest")
+                    b.HasOne("RemitaBillAndBulkPayments.Models.BulkRequests.BulkRequest", null)
                         .WithMany("transactions")
                         .HasForeignKey("BulkRequestbatchRef");
+                });
 
-                    b.Navigation("BulkRequest");
+            modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkResponses.BulkData", b =>
+                {
+                    b.HasOne("RemitaBillAndBulkPayments.Models.BulkResponses.BulkResponse", "BulkResponse")
+                        .WithOne("data")
+                        .HasForeignKey("RemitaBillAndBulkPayments.Models.BulkResponses.BulkData", "BulkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BulkResponse");
                 });
 
             modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkRequests.BulkRequest", b =>
                 {
                     b.Navigation("transactions");
+                });
+
+            modelBuilder.Entity("RemitaBillAndBulkPayments.Models.BulkResponses.BulkResponse", b =>
+                {
+                    b.Navigation("data");
                 });
 #pragma warning restore 612, 618
         }

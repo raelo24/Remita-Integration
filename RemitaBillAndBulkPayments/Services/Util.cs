@@ -20,8 +20,8 @@ namespace RemitaBillAndBulkPayments.Services
         string GenerateTransactionId();
         string GeneratePaymentAuthCode();
         string GenerateBatchRef();
-        Task<TokenData> GetToken();
-        Task<(bool,string, string, TokenData)> GetTokenRealTime();
+        Task<TokenData> GetTokenFromDb(); //useful if the tokens have long lifespan of many days
+        Task<(bool,string, string, TokenData)> GetTokenRealTime(); //useful for only short live tokens
     }
 
     public class Util : IUtil
@@ -77,7 +77,7 @@ namespace RemitaBillAndBulkPayments.Services
 
                 authCode = sb.ToString();
                 //repeat if necessary
-                if (_dbContext.PaymentRequest.Any(x=>x.paymentAuthCode==authCode))
+                if (_dbContext.PaymentRequests.Any(x=>x.paymentAuthCode==authCode))
                 {
                     return GeneratePaymentAuthCode();
                 }
@@ -108,7 +108,7 @@ namespace RemitaBillAndBulkPayments.Services
 
                 //repeat if necessary
                 var intTranId = int.Parse(tranId);
-                if (_dbContext.PaymentRequest.Any(x => x.transactionId == intTranId))
+                if (_dbContext.PaymentRequests.Any(x => x.transactionId == intTranId))
                 {
                     return GenerateTransactionId();
                 }
@@ -137,7 +137,7 @@ namespace RemitaBillAndBulkPayments.Services
                 batchRef = sb.ToString();
 
                 //repeat if necessary
-                if (_dbContext.BulkRequest.Any(x => x.batchRef == batchRef))
+                if (_dbContext.BulkRequests.Any(x => x.batchRef == batchRef))
                 {
                     return GenerateBatchRef();
                 }
@@ -150,7 +150,7 @@ namespace RemitaBillAndBulkPayments.Services
             return batchRef;
         }
 
-        public async Task<TokenData> GetToken()
+        public async Task<TokenData> GetTokenFromDb()
         {
             try
             {
@@ -221,9 +221,6 @@ namespace RemitaBillAndBulkPayments.Services
                 }
 
                 return (false, $"Acquiring token error. {desResponse?.message}", desResponse?.status, null);
-
-
-
             }
             catch (Exception ex)
             {

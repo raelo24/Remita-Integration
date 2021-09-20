@@ -12,17 +12,14 @@ namespace RemitaBillAndBulkPayments.Models.BulkRequests
     public class Transaction
     {
         [Key]
-        public long transactionRef { get; set; }
+        [JsonIgnore]
+        public int id { get; set; }
+        public string transactionRef { get; set; }
         public double amount { get; set; }
-
         public string destinationAccount { get; set; }
         public string destinationAccountName { get; set; }
         public string destinationBankCode { get; set; }
-        public string destinationNarration { get; set; }
-        [JsonIgnore]
-        [ForeignKey("batchRef")]
-        public string batchRef { get; set; }
-        public BulkRequest BulkRequest { get; set; }  //indicate FK
+        public string destinationNarration { get; set; }      
     }
 
     public class BulkRequest

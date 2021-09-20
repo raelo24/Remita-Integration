@@ -31,7 +31,7 @@ namespace RemitaBillAndBulkPayments.Services
 
         Task<Response<PaymentStatus>> PaymentStatus(string rrr);
         Task<Response<BillPaymentResponse>> BillPaymentNotification(BillPaymentRequest request);
-        Task<ResponseBodyBulk<BulkResponse>> SendBulkPayment(BulkRequest request);
+        Task<BulkResponse> SendBulkPayment(BulkRequest request);
 
 
     }
@@ -184,7 +184,7 @@ namespace RemitaBillAndBulkPayments.Services
                 headers.Add("TXN_HASH", request.hash);
 
                 //save this request
-                await _context.PaymentRequest.AddAsync(request);
+                await _context.PaymentRequests.AddAsync(request);
 
                 var response = await _remitaProxy.PostWithExtraHeaders(url, requestBody, headers); 
                 var desResponse = JsonConvert.DeserializeObject<Response<BillPaymentResponse>>(response);
@@ -196,7 +196,7 @@ namespace RemitaBillAndBulkPayments.Services
                     responseToSave.responseMsg = desResponse?.responseMsg;
                     responseToSave.transactionId = request.transactionId;
 
-                    await _context.PaymentResponse.AddAsync(responseToSave);
+                    await _context.PaymentResponses.AddAsync(responseToSave);
                 }               
 
                 await _context.SaveChangesAsync();
@@ -227,74 +227,121 @@ namespace RemitaBillAndBulkPayments.Services
             }
         }
 
-        public async Task<ResponseBodyBulk<BulkResponse>> SendBulkPayment(BulkRequest request)
+        public async Task<BulkResponse> SendBulkPayment(BulkRequest request)
         {
             try
             {
                 //add bearer token              
                 var url = _remitaConstants.BulkPaymentBase + _remitaConstants.SendBulk;
 
-                //set the senders bank cod
+                //set the senders bank code if not set
                 if (string.IsNullOrEmpty(request.originalBankCode))
                 {
                     request.originalBankCode = _questConstants.Value.BankCode;
                     request.sourceBankCode = request.originalBankCode;
-                }
-                
-                request.batchRef = _util.GenerateBatchRef();               
+                }               
+
+                var (isValid, genMessage, modifiedRequest) = await GenerateRefsAndSaveRequest(request);
+
+                if (!isValid)
+                    return new BulkResponse { message = genMessage, status = "1001" };
 
                 //serialize the request
-                string requestBody = JsonConvert.SerializeObject(request);
+                string requestBody = JsonConvert.SerializeObject(modifiedRequest);              
 
-                //save request to database
-                // await _context.BulkRequest.AddAsync(request);
-
-                //get the token
+               //get the token
                 var (isSuccessful, message, status, token) = await _util.GetTokenRealTime();
 
                 if (!isSuccessful)
-                    return new ResponseBodyBulk<BulkResponse>() { responseCode = status, responseMsg = message };
+                    return new BulkResponse() { status = status, message = message };
 
                 Dictionary<string, string> headers = new Dictionary<string, string>();
                 headers.Add("Authorization", $"Bearer {token?.accessToken}");
                 var response = await _remitaProxy.PostWithOwnHeader(url, requestBody, headers);
 
-                var desResponse = JsonConvert.DeserializeObject<ResponseBodyBulk<dynamic>>(response);
+                if(string.IsNullOrEmpty(response))
+                    return new BulkResponse() { status = "1001", message = "No response from Remita server" };
 
-                if(desResponse?.responseData == null && desResponse?.responseData==null && desResponse?.responseMsg ==null)
-                {
-                    var r = JsonConvert.DeserializeObject<BulkResponse>(response);
-                    return new ResponseBodyBulk<BulkResponse>()
-                    {
-                        responseMsg = r.message,
-                        responseCode = r.status,
-                        responseData = r
-                    };
-                }
+                return await PrepareBulkResponse(response);              
 
-                //save the response to db
-                if (desResponse?.responseData != null)
-                {
-                    var data = JsonConvert.DeserializeObject<BulkResponse>(desResponse.responseData);
-
-                    return new ResponseBodyBulk<BulkResponse>() 
-                    {
-                        responseMsg = desResponse.responseMsg, 
-                        responseCode = desResponse.responseCode,
-                        responseData = data
-                    };
-
-                }
-
-                //  await _context.SaveChangesAsync();
-                return null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.ToString());
-                return new ResponseBodyBulk<BulkResponse>() { responseMsg = ex.Message, responseCode = "1001" };
+                return new BulkResponse() { message = ex.Message, status = "1001" };
             }
         }
+
+        /// <summary>
+        /// The response for bulk payment is not regular. The response when it is successful is different
+        /// from when it is not.
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns></returns>
+        private async Task<BulkResponse> PrepareBulkResponse(string response)
+        {
+            var desResponse = JsonConvert.DeserializeObject<ResponseBodyBulk<dynamic>>(response);
+
+            if (desResponse?.responseData == null && desResponse?.responseData == null && desResponse?.responseMsg == null)
+            {
+                var r = JsonConvert.DeserializeObject<BulkResponse>(response);
+                //save to db
+                await _context.BulkResponses.AddAsync(r);
+                await _context.SaveChangesAsync();
+                return r;
+            }
+
+            //observation shows this happens when there is failure. 
+            if (desResponse?.responseData != null)
+            {
+                return new BulkResponse()
+                {
+                    message = desResponse.responseMsg,
+                    status = desResponse.responseCode,
+                    data = null
+                };
+            }
+
+            return null;
+        }
+
+        private async Task<(bool, string, BulkRequest)> GenerateRefsAndSaveRequest(BulkRequest request)
+        {
+            try
+            {
+                request.batchRef = _util.GenerateBatchRef();
+                request.customReference = string.Concat(request.batchRef,"--",request.sourceNarration);
+
+                List<Transaction> transactions = new List<Transaction>();
+                int counter = 1;
+                double sum = 0;
+                foreach (var item in request.transactions)
+                {
+                    item.transactionRef = request.batchRef + counter;                    
+                    transactions.Add(item);
+                    sum += item.amount;
+                    ++counter;
+                }
+
+                if (sum != request.totalAmount)
+                    return (false, "Total amount is not equal to the individual transactions", null);
+
+                request.transactions = transactions;
+
+                //save the request
+                await _context.BulkRequests.AddAsync(request);
+                await _context.SaveChangesAsync();
+
+                return (true, "", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error saving bulk request", ex);
+                return (false, ex.Message, null);
+            }
+        }
+
+       
 
         //public async Task<HttpResult>> GetReceipt(string rrr)
         //{

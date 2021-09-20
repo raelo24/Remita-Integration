@@ -24,7 +24,7 @@ namespace RemitaBillAndBulkPayments.Controllers
         }
 
         [HttpPost("Send")]
-        public async Task<ResponseBodyBulk<BulkResponse>> GenerateRRR(BulkRequest details)
+        public async Task<BulkResponse> GenerateRRR(BulkRequest details)
         {
             return await _remitaService.SendBulkPayment(details);
         }
