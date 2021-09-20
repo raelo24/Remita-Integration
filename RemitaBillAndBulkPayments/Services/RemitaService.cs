@@ -39,7 +39,7 @@ namespace RemitaBillAndBulkPayments.Services
     {
         private ILogger<RemitaService> _logger;
         private IRemitaProxy _remitaProxy;
-        private readonly IOptions<RemitaConstants> _remitaConstants;
+        private readonly RemitaConstants _remitaConstants;
         IOptions<QuestConstants> _questConstants;
         private readonly IUtil _util;
         private readonly DatabaseContext _context;
@@ -51,7 +51,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             _logger = logger;
             _remitaProxy = remitaProxy;
-            _remitaConstants = appsettings;
+            _remitaConstants = appsettings.Value;
             _util = util;
             _context = context;
             _questConstants = questConstants;
@@ -61,7 +61,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             try
             {
-                var response = await _remitaProxy.Get(_remitaConstants.Value.BaseUrl + _remitaConstants.Value.Billers);
+                var response = await _remitaProxy.Get(_remitaConstants.BaseUrl + _remitaConstants.Billers);
                 var desResponse = JsonConvert.DeserializeObject<Response<Billers>>(response);
                 return desResponse;
             }
@@ -81,7 +81,7 @@ namespace RemitaBillAndBulkPayments.Services
                     return new Response<List<Service>>() { responseMsg = "Biller is not indicated", responseCode = "999" };
                 }
 
-                var url = $"{_remitaConstants.Value.BaseUrl}{biller}/{_remitaConstants.Value.Services})";
+                var url = $"{_remitaConstants.BaseUrl}{biller}/{_remitaConstants.Services})";
                 var response = await _remitaProxy.Get(url);
                 var desResponse = JsonConvert.DeserializeObject<Response<List<Service>>>(response);
                 return response == null ? new Response<List<Service>>() : desResponse;
@@ -102,7 +102,7 @@ namespace RemitaBillAndBulkPayments.Services
                     return new ResponseCustomField() { responseMsg = "Biller ID  is not indicated", responseCode = "999" };
                 }
 
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.Services + $"/{billId}";
+                var url = _remitaConstants.BaseUrl + _remitaConstants.Services + $"/{billId}";
                 var response = await _remitaProxy.Get(url);
                 var desResponse = JsonConvert.DeserializeObject<ResponseCustomField>(response);
                 return response == null ? new ResponseCustomField() : desResponse;
@@ -118,7 +118,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             try
             {
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.Validate;
+                var url = _remitaConstants.BaseUrl + _remitaConstants.Validate;
                 string requestBody = JsonConvert.SerializeObject(details);
                 var response = await _remitaProxy.Post(url, requestBody);
                 var desResponse = JsonConvert.DeserializeObject<Response<ValidateResponse>>(response);
@@ -135,7 +135,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             try
             {
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.GenerateRRR;
+                var url = _remitaConstants.BaseUrl + _remitaConstants.GenerateRRR;
                 string requestBody = JsonConvert.SerializeObject(details);
                 var response = await _remitaProxy.Post(url, requestBody);
                 var desResponse = JsonConvert.DeserializeObject<Response<GenerateRRR>>(response);
@@ -152,7 +152,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             try
             {
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.RRDetails + $"/{rrr}";
+                var url = _remitaConstants.BaseUrl + _remitaConstants.RRDetails + $"/{rrr}";
                 var response = await _remitaProxy.Get(url);
                 var desResponse = JsonConvert.DeserializeObject<Response<RRRDetails>>(response);
                 return response == null ? new Response<RRRDetails>() : desResponse;
@@ -162,19 +162,18 @@ namespace RemitaBillAndBulkPayments.Services
                 _logger.LogError(ex.ToString());
                 return new Response<RRRDetails>() { responseMsg = ex.Message, responseCode = "1001" };
             }
-        }
-              
+        }             
 
        
         public async Task<Response<BillPaymentResponse>> BillPaymentNotification(BillPaymentRequest request)
         {
             try
             {
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.billPayment;
+                var url = _remitaConstants.BaseUrl + _remitaConstants.billPayment;
 
                 request.transactionId = long.Parse(_util.GenerateTransactionId());
                 request.paymentAuthCode = _util.GeneratePaymentAuthCode();                
-                request.fundingSource = _remitaConstants.Value.fundingSource;
+                request.fundingSource = _remitaConstants.fundingSource;
                 request.hash = _util.PaymentHash(request); 
 
                 string requestBody = JsonConvert.SerializeObject(request);
@@ -216,7 +215,7 @@ namespace RemitaBillAndBulkPayments.Services
         {
             try
             {
-                var url = _remitaConstants.Value.BaseUrl + _remitaConstants.Value.paymentStatus + $"/{transactionId}";
+                var url = _remitaConstants.BaseUrl + _remitaConstants.paymentStatus + $"/{transactionId}";
                 var response = await _remitaProxy.Get(url);
                 var desResponse = JsonConvert.DeserializeObject<Response<PaymentStatus>>(response);
                 return response == null ? new Response<PaymentStatus>() : desResponse;
@@ -233,12 +232,16 @@ namespace RemitaBillAndBulkPayments.Services
             try
             {
                 //add bearer token              
-                var url = _remitaConstants.Value.BulkPaymentBase + _remitaConstants.Value.SendBulk;
-                request.originalBankCode = _questConstants.Value.BankCode;
-                request.sourceBankCode = request.originalBankCode;
-                request.batchRef = _util.GenerateBatchRef();
+                var url = _remitaConstants.BulkPaymentBase + _remitaConstants.SendBulk;
 
-               
+                //set the senders bank cod
+                if (string.IsNullOrEmpty(request.originalBankCode))
+                {
+                    request.originalBankCode = _questConstants.Value.BankCode;
+                    request.sourceBankCode = request.originalBankCode;
+                }
+                
+                request.batchRef = _util.GenerateBatchRef();               
 
                 //serialize the request
                 string requestBody = JsonConvert.SerializeObject(request);
@@ -257,6 +260,17 @@ namespace RemitaBillAndBulkPayments.Services
                 var response = await _remitaProxy.PostWithOwnHeader(url, requestBody, headers);
 
                 var desResponse = JsonConvert.DeserializeObject<ResponseBodyBulk<dynamic>>(response);
+
+                if(desResponse?.responseData == null && desResponse?.responseData==null && desResponse?.responseMsg ==null)
+                {
+                    var r = JsonConvert.DeserializeObject<BulkResponse>(response);
+                    return new ResponseBodyBulk<BulkResponse>()
+                    {
+                        responseMsg = r.message,
+                        responseCode = r.status,
+                        responseData = r
+                    };
+                }
 
                 //save the response to db
                 if (desResponse?.responseData != null)

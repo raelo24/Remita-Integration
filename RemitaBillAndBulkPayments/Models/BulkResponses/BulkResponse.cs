@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace RemitaBillAndBulkPayments.Models.BulkResponses
 {
     public class BulkData
     {
         public string batchRef { get; set; }
-        public int totalAmount { get; set; }
+        public double totalAmount { get; set; }
         public string authorizationId { get; set; }
         public string transactionDate { get; set; }
     }
